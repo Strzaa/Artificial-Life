@@ -277,6 +277,9 @@ class Enemy(Animal):
         if agent_dis < self.max_speed:
             del agents[closest_agent_index]
 
+
+pygame.init()
+
 # create objects
 agents = [Animal(random.randrange(width), random.randrange(height)) for _ in range(agents_number)]
 enemies = [Enemy(random.randrange(width), random.randrange(height)) for _ in range(enemy_number)]
@@ -293,3 +296,10 @@ clock = pygame.time.Clock()
 # variables to run the simulation
 run = True
 debug = False
+
+# text
+font = pygame.font.Font(font_path, size=font_size)
+text = font.render("Population: " + str(len(agents)), True, WHITE)
+text_rect = text.get_rect()
+text_rect.center = (70, 30)
+

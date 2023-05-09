@@ -1,9 +1,6 @@
 """
 TO DO:
-GUI
-RADIUS FOOD AND POISON AND ENEMY
 BUTTONS AND SETTINGS MENU
-FILE SLICE
 """
 from Backend import *
 
@@ -11,7 +8,7 @@ from Backend import *
 pygame.init()
 
 while run:
-    clock.tick(40)
+    clock.tick(animation_speed)
     screen.fill(BLACK)
 
     for agent in agents:
@@ -33,9 +30,19 @@ while run:
         food.show()
         food.update()
 
-    pygame.display.flip()
+    text = font.render("Population: " + str(len(agents)), True, WHITE)
+    screen.blit(text, text_rect)
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             run = False
+        if event.type == pygame.KEYDOWN:
+            if event.unicode == '+':
+                animation_speed += 10
+                if animation_speed >= 240: animation_speed = 240
+            if event.unicode == '-':
+                animation_speed -= 10
+                if animation_speed <= 10: animation_speed = 10
+
+    pygame.display.flip()
 
