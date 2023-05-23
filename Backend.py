@@ -320,14 +320,14 @@ class Animal:  # klasa agentów
 
             if agent_dis < self.radius:
                 reproduction_force = self.seek(agents[closest_agent_index])
-                reproduction_force.limit(self.max_force)
+                reproduction_force.set_mag(self.max_force)
 
             self.apply_force(reproduction_force)
             if agent_dis <= self.max_speed and agents[closest_agent_index].ready_to_reproduce and len(
                     agents) <= max_agents_number:
                 self.ready_to_reproduce = False
-                self.health = 0.5
-                agents[closest_agent_index].health -= health_reproduction_rate
+                self.health = starting_health
+                agents[closest_agent_index].health = starting_health
                 agents[closest_agent_index].ready_to_reproduce = False
 
                 new_dna = self.cross(agents[closest_agent_index])

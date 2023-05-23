@@ -8,6 +8,7 @@ while run:
     clock.tick(animation_speed)
     screen.fill(BLACK)
 
+# EVENTS
     events = pygame.event.get()
     for event in events:
         if event.type == pygame.QUIT:
@@ -35,26 +36,28 @@ while run:
             if event.key == pygame.K_r:
                 agents, enemies, foods_g, foods_p = setup()
 
+# MENU
     if start is False:
         screen.fill(BLACK)
         menu(events)
         pygame.display.flip()
         continue
 
+# SIMULATION
     for agent in agents:
         if simulation:
             agent.health_update(agents)
-            agent.update()
             if agent.boundries() is None:
                 agent.run(foods_g, foods_p, enemies, agents)
                 agent.reproduce(agents)
+            agent.update()
         agent.show(agents, enemies, debug)
 
     for enemy in enemies:
         if simulation:
-            enemy.update()
             enemy.seek_agents(agents)
             enemy.enemy_distance(enemies)
+            enemy.update()
         enemy.show(agents, enemies, debug)
 
     foods = foods_g + foods_p
