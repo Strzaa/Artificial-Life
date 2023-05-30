@@ -8,6 +8,7 @@ from pygame_widgets.slider import Slider
 pygame.init()
 
 ##########PARAMETRY#####################
+# colors
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 BLUE = (0, 0, 255)
@@ -16,6 +17,7 @@ RED = (255, 0, 0)
 PURPLE = (119, 0, 200)
 GREY = (169, 169, 169)
 LIGHT_BLUE = (63, 79, 232)
+LIME = (191, 255, 0)
 
 # window
 width = 1300
@@ -36,33 +38,42 @@ simulation = True
 start = False
 animation_speed = 60
 
-food_number = 150  #
-poison_number = 50  #
-agents_number = 80  #
-max_agents_number = 250
+# base numbers
+food_number = 180  #
+poison_number = 60  #
+agents_number = 120  #
+max_agents_number = 200
 enemy_number = 3  #
 
+# agent settings
 agent_health = 1
 starting_health = 0.5
-agent_max_speed = 6  #
-agent_max_force = 1.2  #
-agent_size = 12
+agent_max_speed = 7  #
+agent_max_force = 1.8  #
+agent_size = 14
 
-poison_health = -0.8  #
-food_health = 0.4  #
-eatable_size = 3
+# food settings
+poison_health = -0.5  #
+food_health = 0.6  #
+eatable_size = 4
 
+# enemy settings
 enemy_max_speed = 3  #
 enemy_max_force = 0.3  #
-enemy_size = 40
+enemy_size = 60
 
-agent_radius_min = 40  #
-agent_radius_max = 250  #
+# radius (seeing area)
+agent_radius_min = 80  #
+agent_radius_max = 300  #
 
+# debug circle
 circle_width = 2
 
-mutation_chance = 0.05  #
+# reproduction settings
+mutation_chance = 0.2  #
 health_reproduction_rate = 0.75  #
+health_loss = 0.005
+cooldown = 1500
 
 #############SET_UP##############################
 # set up window and clock
@@ -151,7 +162,7 @@ class Animal:  # klasa agentów
         self.theta = 0  # kat wektora do osi x
         self.size = agent_size
         self.color = GREEN
-        self.dna = [0] * 4
+        self.dna = [0] * 6  # 0 - food, 1 - poison, 2 - enemy, 3 - radius, 4 - green_area, 5 - red_area
         if dna is None:
             for i in range(len(self.dna)):
                 self.dna[i] = self.generate_dna(i)
@@ -160,11 +171,23 @@ class Animal:  # klasa agentów
         self.enemy = False
         self.health = starting_health
         self.radius = self.dna[3]
-        self.ready_to_reproduce = False
+        self.ready_to_reproduce = False  # bazowo False
+        self.time_life = 0  # czas zycia
+        self.last_reproduce_time = 0  # ostatni okres reprodukcji
 
     def generate_dna(self, number):
         if number == 3:
             return random.uniform(agent_radius_min, agent_radius_max)
+        elif number == 4:
+            random_number = random.uniform(-2, 2)
+            while random_number == 0:
+                random_number = random.uniform(-2, 2)
+            return random_number
+        elif number == 5:
+            random_number = random.uniform(-2, 2)
+            while random_number == 0:
+                random_number = random.uniform(-2, 2)
+            return random_number
         else:
             random_number = random.uniform(-5, 5)
             while random_number == 0:
@@ -173,15 +196,25 @@ class Animal:  # klasa agentów
 
     def health_update(self, agents, value=None):
         if value is None:
-            self.health -= 0.005
+            if self.position.distance(central_point_green) <= green_radius:  # jezeli jest w green_area
+                self.health -= health_loss / 2
+            elif self.position.distance(central_point_red) <= red_radius:  # jezeli jest w red_area
+                self.health -= health_loss * 4
+            else:
+                self.health -= health_loss
         else:
-            self.health += value
-            if self.health >= agent_health: self.health = agent_health
+            # jezeli zjada jedzenie w jakiejs ze stref
+            if (self.position.distance(central_point_green) <= green_radius and value > 0) or (self.position.distance(central_point_red) <= red_radius and value < 0):
+                self.health += value * 3
+            else:
+                self.health += value
+            if self.health >= agent_health: self.health = agent_health  # max health
 
-        if self.health <= 0 and self in agents:
+        if self.health <= 0 and self in agents:  # agent died
             del agents[agents.index(self)]
             return
 
+        # ustawienie wartosc do reprodukcji
         if self.ready_to_reproduce is False: self.color = self.lerpColor(RED, GREEN, self.health)
 
         if self.health >= health_reproduction_rate:
@@ -194,7 +227,7 @@ class Animal:  # klasa agentów
         self.velocity.limit(self.max_speed)
         self.position.add(self.velocity)
 
-    def boundries(self):
+    def boundries(self):  # odbijanie sie od scian
         desired = None
 
         if self.position.x < move:
@@ -212,7 +245,7 @@ class Animal:  # klasa agentów
             steer = Vector2D(desired.x - self.velocity.x, desired.y - self.velocity.y)
             steer.limit(self.max_force)
             self.acceleration = steer
-        return desired
+        return desired  # sprawdzane w main()
 
     def show(self, agents, enemies, debug):  # narysowanie
         self.theta = math.atan2(self.velocity.y, self.velocity.x)
@@ -226,7 +259,7 @@ class Animal:  # klasa agentów
         if self.enemy is False and self in agents:
             if debug: pygame.draw.circle(screen, WHITE, [self.position.x, self.position.y], self.radius, circle_width)
 
-    def lerpColor(self, startColor, endColor, t):
+    def lerpColor(self, startColor, endColor, t):  # przejscie z jednego koloru w drugi
         r = int(startColor[0] + (endColor[0] - startColor[0]) * t)
         g = int(startColor[1] + (endColor[1] - startColor[1]) * t)
         b = int(startColor[2] + (endColor[2] - startColor[2]) * t)
@@ -242,21 +275,23 @@ class Animal:  # klasa agentów
 
         return steering_force  # nowe przyspieszenie
 
-    def apply_force(self, value):
+    def apply_force(self, value):  # dodanie nowej sily / acc
         self.acceleration += value
 
         if self.acceleration.mag() >= self.max_force:
             self.acceleration.set_mag(self.max_force)
 
-    def run(self, foods_g, foods_p, enemies, agents):
+    def run(self, foods_g, foods_p, enemies, agents):  # poruszanie sie agenta
         if len(foods_g) < 1 or len(foods_p) < 1 or len(enemies) < 1: return
 
+        # znalezienei najblizszych obiektów i zwricenie indeksow i dystansu
         food_dis, closest_food_index = self.find_closest(foods_g)
         poison_dis, closest_poison_index = self.find_closest(foods_p)
         enemy_dis, closest_enemy_index = self.find_closest(enemies)
 
         food_force, poison_force, enemy_force = Vector2D(0, 0), Vector2D(0, 0), Vector2D(0, 0)
 
+        # jezeli dystans miesci sie w radius to wplywa na ruch agenta
         if food_dis < self.radius:
             food_force = self.seek(foods_g[closest_food_index])
             food_force.multi(self.dna[0])
@@ -269,19 +304,33 @@ class Animal:  # klasa agentów
             enemy_force = self.seek(enemies[closest_enemy_index])
             enemy_force.multi(self.dna[2])
 
-        force = food_force + poison_force + enemy_force
+        green_force = Vector2D(0, 0)
+        red_force = Vector2D(0, 0)
+
+        # jezeli jest poza green i red area to wplywa na ruch, jak jest w srodku to nie
+        if self.position.distance(central_point_green) >= green_radius:
+            green_force = self.seek(central_point_green)
+            green_force.multi(self.dna[4])
+        if self.position.distance(central_point_red) >= red_radius:
+            red_force = self.seek(central_point_red)
+            red_force.multi(self.dna[5])
+
+        # dodanie wszystkich sil
+        force = food_force + poison_force + enemy_force + green_force + red_force
 
         self.apply_force(force)
 
+        # zjedzenie food
         if food_dis < self.max_speed:
             del foods_g[closest_food_index]
             self.health_update(agents, food_health)
 
+        # zjedzenie poison
         if poison_dis < self.max_speed:
             del foods_p[closest_poison_index]
             self.health_update(agents, poison_health)
 
-    def find_closest(self, list):
+    def find_closest(self, list):  # znalezienie najblizszego obiektu z listy i zwrocenie indeksu i dystansu
         closest_index = -1
         distance = 1000
 
@@ -293,7 +342,7 @@ class Animal:  # klasa agentów
 
         return distance, closest_index
 
-    def find_closest_to_reproduce(self, list):
+    def find_closest_to_reproduce(self, list):  # znalezienie nablizszego do reprodukcji
         closest_index = -1
         distance = 1000
 
@@ -305,45 +354,54 @@ class Animal:  # klasa agentów
 
         return distance, closest_index
 
-    def translate(self, point):
+    def translate(self, point):  # translacja wzdłuż osi x i y z rotacją punktu
         x = self.position.x + point.x * math.cos(self.theta) - point.y * math.sin(self.theta)
         y = self.position.y + point.x * math.sin(self.theta) + point.y * math.cos(self.theta)
         return [x, y]
 
-    def reproduce(self, agents):
-        if self.ready_to_reproduce and len(agents) > 1:
+    def reproduce(self, agents):  # reprodukcja
+        if self.time_life - self.last_reproduce_time < cooldown: return  # cooldown na reprodukcje
+
+        if self.ready_to_reproduce and len(agents) > 1:  # gotowy - kolor fioletowy
             self.color = PURPLE
 
-            agent_dis, closest_agent_index = self.find_closest_to_reproduce(agents)
-
+            agent_dis, closest_agent_index = self.find_closest_to_reproduce(agents)  # szukamy najblizszego agenta
             reproduction_force = Vector2D(0, 0)
 
-            if agent_dis < self.radius:
+            if agent_dis < self.radius:  # jezeli jest w polu widzenia
                 reproduction_force = self.seek(agents[closest_agent_index])
                 reproduction_force.set_mag(self.max_force)
 
             self.apply_force(reproduction_force)
             if agent_dis <= self.max_speed and agents[closest_agent_index].ready_to_reproduce and len(
-                    agents) <= max_agents_number:
+                    agents) <= max_agents_number:  # sprawdzenie warunkow do repdotukcji
+
+                #  ustawienie wartosci rodzicow po reprodukcji
                 self.ready_to_reproduce = False
                 self.health = starting_health
                 agents[closest_agent_index].health = starting_health
                 agents[closest_agent_index].ready_to_reproduce = False
 
+                #  stworzenie nowego osobnika
                 new_dna = self.cross(agents[closest_agent_index])
-                agents.append(Animal(self.position.x, self.position.y, new_dna))
+                child = Animal(self.position.x, self.position.y, new_dna)
+                agents.append(child)
 
-    def cross(self, parent):
-        new_dna = [0] * 4
+                #  cooldown na reprodukcje
+                self.last_reproduce_time = self.time_life
+                agents[closest_agent_index].last_reproduce_time = agents[closest_agent_index].time_life
+
+    def cross(self, parent):  # krzyzowanie, powstanie dna
+        new_dna = [0] * 6
         for i in range(len(self.dna)):
-            new_dna[i] = (self.dna[i] + parent.dna[i]) / 2
-            if random.random() <= mutation_chance:
+            new_dna[i] = (self.dna[i] + parent.dna[i]) / 2  # nowe dna to srednia z dna rodzicow
+            if random.random() <= mutation_chance:  # mutacja
                 if random.random() <= 0.5:
                     new_dna[i] += self.dna[i] / 2
                 else:
                     new_dna[i] -= self.dna[i] / 2
 
-        print(new_dna)
+        print(f"New_Dna: {new_dna}")  # debug w celu sprawdzania nowych dna
         return new_dna
 
 
@@ -353,13 +411,15 @@ class Food:
         self.poison = poison
         self.size = eatable_size
 
-    def show(self):
+    def show(self):  # rysowanie food
         if self.poison:
+            if self.position.distance(central_point_red) <= red_radius: self.size = eatable_size * 2  # jezeli trucizna jest w red_area
             pygame.draw.ellipse(screen, RED, [self.position.x, self.position.y, self.size, self.size])
         else:
+            if self.position.distance(central_point_green) <= green_radius: self.size = eatable_size * 2  # jezeli food jest w green_area
             pygame.draw.ellipse(screen, GREEN, [self.position.x, self.position.y, self.size, self.size])
 
-    def update(self, foods_g, foods_p):
+    def update(self, foods_g, foods_p):  # dodawanie nowego jedzenia jak ktores zostalo zjedzone
         if len(foods_p) < poison_number:
             foods_p.append(
                 Food(random.randrange(0 + move, width - move), random.randrange(0 + move, height - move), True))
@@ -368,17 +428,17 @@ class Food:
                 Food(random.randrange(0 + move, width - move), random.randrange(0 + move, height - move), False))
 
 
-class Enemy(Animal):
+class Enemy(Animal):  # dziedziczy po Animal
     def __init__(self, x, y):
         super().__init__(x, y)
         self.max_force = enemy_max_force
         self.max_speed = enemy_max_speed
         self.color = WHITE
-        self.enemy = True
+        self.enemy = True  # zmiana
         self.size = enemy_size
         self.radius = 20
 
-    def seek_agents(self, agents):
+    def seek_agents(self, agents):  # wyszukiwanie najblizszego agenta, bez radius
         if len(agents) < 1: return
         agent_dis, closest_agent_index = self.find_closest(agents)
         force_agent = self.seek(agents[closest_agent_index])
@@ -387,7 +447,7 @@ class Enemy(Animal):
         if agent_dis < self.max_speed:
             del agents[closest_agent_index]
 
-    def enemy_distance(self, enemies):
+    def enemy_distance(self, enemies):  # odsuwanie sie od siebie enemies
         if len(enemies) < 2: return
         enemy_dis, closest_enemy_index = self.find_closest(enemies)
         if enemy_dis < self.radius:
@@ -398,7 +458,7 @@ class Enemy(Animal):
             self.apply_force(force)
 
 
-class Sliders:
+class Sliders:  # suwaki
     def __init__(self, slider_x, slider_y, min, max, step):
         self.slider_x = slider_x
         self.slider_y = slider_y
@@ -406,27 +466,41 @@ class Sliders:
         self.max = max
         self.step = step
 
-        self.slider = self.create()
+        self.slider = self.create()  # obiekt suwaka
 
     def create(self):
         return Slider(screen, self.slider_x, self.slider_y, slider_width, slider_height, min=self.min, max=self.max,
                       step=self.step, colour=GREY, handleColour=LIGHT_BLUE)
 
 
-class Text:
+class Text:  # text nad suwakiem
     def __init__(self, text, value_start, x, y):
         self.text = text
         self.value_start = value_start
         self.x = x
         self.y = y
 
-        text_ = font.render(self.text + str(self.value_start), True, WHITE)
+        text_ = font.render(self.text + str(self.value_start), True, WHITE)  # obiekt text
         self.text_rect = text_.get_rect()
         self.text_rect.center = (self.x, self.y)
 
-    def show(self, value):
+    def show(self, value):  # pokazywanie tekstu
         text = font.render(self.text + str(value), True, WHITE)
         screen.blit(text, self.text_rect)
+
+# Enviroment settings
+central_point_green = Food(100, 150, False)
+central_point_red = Food(1150, 600, False)
+green_radius = 325
+red_radius = 300
+
+def draw_enviroment():  # rysowanie enviroment
+    surface = pygame.Surface((width, height), pygame.SRCALPHA)
+
+    pygame.draw.circle(surface, (30, 224, 33, 45), (central_point_green.position.x, central_point_green.position.y), green_radius)
+    pygame.draw.circle(surface, RED + (45,), (central_point_red.position.x, central_point_red.position.y), red_radius)
+
+    screen.blit(surface, (0, 0))
 
 
 ###############MENU###############
