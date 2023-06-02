@@ -39,8 +39,8 @@ start = False
 animation_speed = 60
 
 # base numbers
-food_number = 180  #
-poison_number = 60  #
+food_number = 300  #
+poison_number = 90  #
 agents_number = 120  #
 max_agents_number = 200
 enemy_number = 3  #
@@ -53,8 +53,8 @@ agent_max_force = 1.8  #
 agent_size = 14
 
 # food settings
-poison_health = -0.5  #
-food_health = 0.6  #
+poison_health = -0.7  #
+food_health = 0.35  #
 eatable_size = 4
 
 # enemy settings
@@ -64,16 +64,16 @@ enemy_size = 60
 
 # radius (seeing area)
 agent_radius_min = 80  #
-agent_radius_max = 300  #
+agent_radius_max = 200  #
 
 # debug circle
 circle_width = 2
 
 # reproduction settings
-mutation_chance = 0.2  #
+mutation_chance = 0.25  #
 health_reproduction_rate = 0.75  #
 health_loss = 0.005
-cooldown = 1500
+cooldown = 1000
 
 #############SET_UP##############################
 # set up window and clock
@@ -179,14 +179,14 @@ class Animal:  # klasa agentów
         if number == 3:
             return random.uniform(agent_radius_min, agent_radius_max)
         elif number == 4:
-            random_number = random.uniform(-2, 2)
+            random_number = random.uniform(-1, 1)
             while random_number == 0:
-                random_number = random.uniform(-2, 2)
+                random_number = random.uniform(-1, 1)
             return random_number
         elif number == 5:
-            random_number = random.uniform(-2, 2)
+            random_number = random.uniform(-1, 1)
             while random_number == 0:
-                random_number = random.uniform(-2, 2)
+                random_number = random.uniform(-1, 1)
             return random_number
         else:
             random_number = random.uniform(-5, 5)
@@ -197,15 +197,15 @@ class Animal:  # klasa agentów
     def health_update(self, agents, value=None):
         if value is None:
             if self.position.distance(central_point_green) <= green_radius:  # jezeli jest w green_area
-                self.health -= health_loss / 2
+                self.health -= 0
             elif self.position.distance(central_point_red) <= red_radius:  # jezeli jest w red_area
-                self.health -= health_loss * 4
+                self.health -= health_loss * 2
             else:
                 self.health -= health_loss
         else:
             # jezeli zjada jedzenie w jakiejs ze stref
             if (self.position.distance(central_point_green) <= green_radius and value > 0) or (self.position.distance(central_point_red) <= red_radius and value < 0):
-                self.health += value * 3
+                self.health += value * 2
             else:
                 self.health += value
             if self.health >= agent_health: self.health = agent_health  # max health
@@ -311,9 +311,11 @@ class Animal:  # klasa agentów
         if self.position.distance(central_point_green) >= green_radius:
             green_force = self.seek(central_point_green)
             green_force.multi(self.dna[4])
+            green_force.set_mag(self.max_force / 2)
         if self.position.distance(central_point_red) >= red_radius:
             red_force = self.seek(central_point_red)
             red_force.multi(self.dna[5])
+            red_force.set_mag(self.max_force / 2)
 
         # dodanie wszystkich sil
         force = food_force + poison_force + enemy_force + green_force + red_force
@@ -520,12 +522,12 @@ agent_max_force_text = Text("Agent max force: ", agent_max_force_menu.slider.get
                             agent_max_force_menu.slider_x + 100, agent_max_force_menu.slider_y - 30)
 agent_max_force_menu.slider.setValue(agent_max_force)
 
-agent_radius_min_menu = Sliders(100, 390, 10, 99, 1)
+agent_radius_min_menu = Sliders(100, 390, 50, 150, 1)
 agent_radius_min_text = Text("Agent radius min : ", agent_radius_min_menu.slider.getValue(),
                              agent_radius_min_menu.slider_x + 100, agent_radius_min_menu.slider_y - 30)
 agent_radius_min_menu.slider.setValue(agent_radius_min)
 
-agent_radius_max_menu = Sliders(100, 480, 100, 400, 1)
+agent_radius_max_menu = Sliders(100, 480, 151, 300, 1)
 agent_radius_max_text = Text("Agent radius max : ", agent_radius_max_menu.slider.getValue(),
                              agent_radius_max_menu.slider_x + 100, agent_radius_max_menu.slider_y - 30)
 agent_radius_max_menu.slider.setValue(agent_radius_max)
@@ -558,7 +560,7 @@ enemy_max_force_text = Text("Enemy max force: ", enemy_max_force_menu.slider.get
 enemy_max_force_menu.slider.setValue(enemy_max_force)
 
 # food
-food_number_menu = Sliders(680, 120, 10, 200, 10)
+food_number_menu = Sliders(680, 120, 10, 500, 10)
 food_number_text = Text("Food number : ", food_number_menu.slider.getValue(),
                         food_number_menu.slider_x + 100, food_number_menu.slider_y - 30)
 food_number_menu.slider.setValue(food_number)
@@ -569,7 +571,7 @@ food_health_text = Text("Food health gain : ", food_health_menu.slider.getValue(
 food_health_menu.slider.setValue(food_health)
 
 # poison
-poison_number_menu = Sliders(970, 120, 10, 200, 10)
+poison_number_menu = Sliders(970, 120, 10, 300, 10)
 poison_number_text = Text("Poison number : ", poison_number_menu.slider.getValue(),
                           poison_number_menu.slider_x + 100, poison_number_menu.slider_y - 30)
 poison_number_menu.slider.setValue(poison_number)
