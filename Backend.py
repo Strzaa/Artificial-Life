@@ -197,7 +197,7 @@ class Animal:  # klasa agentów
     def health_update(self, agents, value=None):
         if value is None:
             if self.position.distance(central_point_green) <= green_radius:  # jezeli jest w green_area
-                self.health -= 0
+                self.health -= health_loss / 2
             elif self.position.distance(central_point_red) <= red_radius:  # jezeli jest w red_area
                 self.health -= health_loss * 2
             else:
@@ -311,11 +311,11 @@ class Animal:  # klasa agentów
         if self.position.distance(central_point_green) >= green_radius:
             green_force = self.seek(central_point_green)
             green_force.multi(self.dna[4])
-            green_force.set_mag(self.max_force / 2)
+            green_force.set_mag(self.max_force / 3)
         if self.position.distance(central_point_red) >= red_radius:
             red_force = self.seek(central_point_red)
             red_force.multi(self.dna[5])
-            red_force.set_mag(self.max_force / 2)
+            red_force.set_mag(self.max_force / 3)
 
         # dodanie wszystkich sil
         force = food_force + poison_force + enemy_force + green_force + red_force
